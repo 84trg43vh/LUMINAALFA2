@@ -95,6 +95,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .btn-send {
@@ -273,6 +274,7 @@ body {
     bottom: 0;
     z-index: 20;
     transition: transform 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
 }
 
 .sidebar.show {
@@ -391,6 +393,46 @@ body {
     height: 100%;
 }
 
+.typing-indicator {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 15px;
+    font-size: 0.8rem;
+    color: var(--primary-light);
+    background: rgba(162, 155, 254, 0.1);
+    margin: 0 15px;
+    border-radius: 15px;
+    width: fit-content;
+}
+
+.typing {
+    display: flex;
+    gap: 4px;
+}
+
+.typing span {
+    width: 8px;
+    height: 8px;
+    background: var(--primary-light);
+    border-radius: 50%;
+    display: inline-block;
+    animation: typingAnimation 1.4s infinite ease-in-out;
+}
+
+.typing span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingAnimation {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+}
+
 .messages {
     flex: 1;
     padding: 15px;
@@ -433,12 +475,27 @@ body {
     color: var(--primary-light);
 }
 
+.message-text {
+    margin-bottom: 4px;
+}
+
 .message-time {
     font-size: 0.7rem;
     opacity: 0.7;
     margin-top: 5px;
     display: block;
     text-align: right;
+}
+
+.message-read {
+    font-size: 0.7rem;
+    margin-left: 5px;
+    color: rgba(255,255,255,0.7);
+}
+
+.message-user .message-read {
+    display: inline-flex;
+    align-items: center;
 }
 
 .message-actions {
@@ -535,6 +592,29 @@ body {
     background-position: center;
 }
 
+/* Notificações */
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--secondary);
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
 /* Animações */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -558,10 +638,6 @@ body {
         flex-direction: row;
     }
     
-    #menu-btn {
-        display: none;
-    }
-    
     .modal {
         align-items: center;
         justify-content: center;
@@ -571,158 +647,5 @@ body {
         max-width: 400px;
         border-radius: 20px;
         animation: fadeIn 0.3s ease-out;
-    }
-}
-
-/* Adicione estas regras ao seu CSS existente */
-
-/* Indicador de digitando */
-.typing-indicator {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 15px;
-    font-size: 0.8rem;
-    color: var(--primary-light);
-    background: rgba(162, 155, 254, 0.1);
-    margin: 0 15px;
-    border-radius: 15px;
-    width: fit-content;
-}
-
-.typing {
-    display: flex;
-    gap: 4px;
-}
-
-.typing span {
-    width: 8px;
-    height: 8px;
-    background: var(--primary-light);
-    border-radius: 50%;
-    display: inline-block;
-    animation: typingAnimation 1.4s infinite ease-in-out;
-}
-
-.typing span:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.typing span:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-@keyframes typingAnimation {
-    0%, 60%, 100% { transform: translateY(0); }
-    30% { transform: translateY(-5px); }
-}
-
-/* Notificações */
-.notification-badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: var(--secondary);
-    color: white;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    font-size: 0.7rem;
-    display: none;
-    align-items: center;
-    justify-content: center;
-}
-
-.notification-menu {
-    position: fixed;
-    top: 60px;
-    right: 15px;
-    width: 90%;
-    max-width: 350px;
-    max-height: 400px;
-    overflow-y: auto;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 5px 25px rgba(0,0,0,0.15);
-    z-index: 1000;
-    padding: 15px;
-}
-
-.notification-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--gray);
-}
-
-.notification-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.notification-item {
-    padding: 10px;
-    border-radius: 8px;
-    background: var(--light);
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.notification-item:hover {
-    background: rgba(162, 155, 254, 0.2);
-}
-
-.notification-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--gradient);
-    background-size: cover;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-}
-
-.notification-content {
-    flex: 1;
-}
-
-.notification-content p {
-    font-size: 0.8rem;
-    color: var(--dark);
-    margin-top: 3px;
-}
-
-.notification-time {
-    font-size: 0.7rem;
-    color: var(--primary-light);
-}
-
-/* Mensagem visualizada */
-.message-read {
-    font-size: 0.7rem;
-    margin-left: 5px;
-    color: rgba(255,255,255,0.7);
-}
-
-.message-user .message-read {
-    display: inline-flex;
-    align-items: center;
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-    .notification-menu {
-        top: 50px;
-        right: 10px;
-        width: 85%;
     }
 }

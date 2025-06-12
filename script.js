@@ -37,9 +37,6 @@ const sidebar = document.getElementById('sidebar');
 const userMenu = document.getElementById('user-menu');
 const typingIndicator = document.getElementById('typing-indicator');
 const notificationBadge = document.getElementById('notification-badge');
-const notificationMenu = document.getElementById('notification-menu');
-const notificationList = document.getElementById('notification-list');
-const clearNotificationsBtn = document.getElementById('clear-notifications');
 
 // Variáveis globais
 let currentUser = null;
@@ -48,7 +45,7 @@ let currentRecipient = null;
 let usersRef, conversationsRef, messagesRef, userStatusRef, typingRef;
 let isTyping = false;
 let typingTimeout;
-let notifications = [];
+let unreadMessages = {};
 
 // Event Listeners
 loginBtn.addEventListener('click', loginWithEmail);
@@ -60,19 +57,11 @@ sendBtn.addEventListener('click', sendMessage);
 messageInput.addEventListener('keypress', handleTyping);
 messageInput.addEventListener('input', checkTyping);
 userAvatarMenu.addEventListener('click', showUserMenu);
-menuBtn.addEventListener('click', (e) => {
-    if (notificationMenu.classList.contains('hidden')) {
-        toggleSidebar();
-    } else {
-        notificationMenu.classList.add('hidden');
-    }
-});
-clearNotificationsBtn.addEventListener('click', clearNotifications);
 
 // Fecha menus ao clicar fora
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('.notification-menu') && !e.target.closest('#menu-btn')) {
-        notificationMenu.classList.add('hidden');
+    if (!e.target.closest('.sidebar') && !e.target.closest('.menu-toggle')) {
+        sidebar.classList.remove('show');
     }
     if (!e.target.closest('.modal-content') && !e.target.closest('#user-avatar-menu')) {
         userMenu.classList.add('hidden');
@@ -95,7 +84,7 @@ function initApp() {
     });
 }
 
-// Autenticação (mantido igual)
+// Autenticação
 function loginWithEmail() {
     const email = emailInput.value;
     const password = passwordInput.value;
@@ -151,7 +140,7 @@ function logout() {
     auth.signOut();
 }
 
-// Interface (mantido igual)
+// Interface
 function showAuthUI() {
     authScreen.classList.remove('hidden');
     chatScreen.classList.add('hidden');
@@ -186,7 +175,7 @@ function showUserMenu() {
     userMenu.classList.remove('hidden');
 }
 
-// Configuração do Chat (atualizado)
+// Configuração do Chat
 function setupChat(user) {
     usersRef = database.ref('users');
     conversationsRef = database.ref('conversations');
@@ -216,7 +205,7 @@ function setupChat(user) {
     openGlobalChat();
 }
 
-// Usuários Online (mantido igual)
+// Usuários Online
 function loadOnlineUsers() {
     userStatusRef.orderByChild('status').equalTo('online').on('value', snapshot => {
         onlineUsersContainer.innerHTML = '';
@@ -270,7 +259,7 @@ function addOnlineUser(user) {
     onlineUsersContainer.appendChild(userElement);
 }
 
-// Conversas (atualizado)
+// Conversas
 function createPrivateChat(recipient) {
     const conversationId = generateConversationId(currentUser.uid, recipient.uid);
     
@@ -311,6 +300,12 @@ function openPrivateChat(conversationId, recipient) {
     chatTitle.textContent = recipient.displayName;
     messagesContainer.innerHTML = '';
     
+    // Marca mensagens como lidas
+    if (unreadMessages[conversationId]) {
+        unreadMessages[conversationId] = 0;
+        updateNotificationBadge();
+    }
+    
     if (messagesRef) messagesRef.off();
     
     messagesRef = database.ref(`messages/${conversationId}`);
@@ -327,7 +322,7 @@ function openPrivateChat(conversationId, recipient) {
     setupTypingIndicator(conversationId, recipient);
 }
 
-// Mensagens (atualizado)
+// Mensagens
 function displayMessage(message) {
     const isCurrentUser = message.uid === currentUser.uid;
     const messageElement = document.createElement('div');
@@ -375,7 +370,7 @@ function sendMessage() {
         displayName: currentUser.displayName || currentUser.email.split('@')[0],
         text: text,
         timestamp: firebase.database.ServerValue.TIMESTAMP,
-        read: false
+        read: currentChatId === 'global' ? true : false
     };
     
     database.ref(`messages/${currentChatId}/${messageId}`).set(message)
@@ -402,7 +397,7 @@ function deleteMessage(messageId) {
         .catch(error => console.error('Erro ao apagar mensagem:', error));
 }
 
-// Digitando... (novo)
+// Digitando...
 function setupTypingIndicator(conversationId, recipient) {
     if (typingRef) typingRef.off();
     
@@ -458,65 +453,24 @@ function stopTyping() {
     }
 }
 
-// Notificações (novo)
+// Notificações
 function checkNewMessages() {
     conversationsRef.orderByChild(`participants/${currentUser.uid}`).equalTo(true).on('value', (snapshot) => {
-        notificationList.innerHTML = '';
-        let unreadCount = 0;
+        unreadMessages = {};
+        let totalUnread = 0;
         
         snapshot.forEach((conversationSnapshot) => {
             const conversation = conversationSnapshot.val();
             const lastMessage = conversation.lastMessage;
             
             if (lastMessage && lastMessage.uid !== currentUser.uid && !lastMessage.read) {
-                unreadCount++;
-                
-                // Encontra o outro participante
-                let recipientId = null;
-                for (const uid in conversation.participants) {
-                    if (uid !== currentUser.uid) {
-                        recipientId = uid;
-                        break;
-                    }
-                }
-                
-                if (recipientId) {
-                    usersRef.child(recipientId).once('value', (userSnapshot) => {
-                        const user = userSnapshot.val();
-                        if (user) {
-                            addNotification(conversationSnapshot.key, user, lastMessage);
-                        }
-                    });
-                }
+                unreadMessages[conversationSnapshot.key] = (unreadMessages[conversationSnapshot.key] || 0) + 1;
+                totalUnread++;
             }
         });
         
-        updateNotificationBadge(unreadCount);
+        updateNotificationBadge(totalUnread);
     });
-}
-
-function addNotification(conversationId, user, message) {
-    const notificationItem = document.createElement('div');
-    notificationItem.classList.add('notification-item');
-    notificationItem.dataset.conversationId = conversationId;
-    
-    notificationItem.innerHTML = `
-        <div class="notification-avatar" style="${user.photoURL ? `background-image: url(${user.photoURL})` : ''}">
-            ${user.photoURL ? '' : user.displayName.charAt(0).toUpperCase()}
-        </div>
-        <div class="notification-content">
-            <strong>${user.displayName}</strong>
-            <p>${message.text.substring(0, 30)}${message.text.length > 30 ? '...' : ''}</p>
-            <div class="notification-time">${formatTime(message.timestamp)}</div>
-        </div>
-    `;
-    
-    notificationItem.addEventListener('click', () => {
-        openPrivateChat(conversationId, user);
-        notificationMenu.classList.add('hidden');
-    });
-    
-    notificationList.appendChild(notificationItem);
 }
 
 function updateNotificationBadge(count) {
@@ -526,12 +480,6 @@ function updateNotificationBadge(count) {
     } else {
         notificationBadge.style.display = 'none';
     }
-}
-
-function clearNotifications() {
-    notificationList.innerHTML = '';
-    updateNotificationBadge(0);
-    notificationMenu.classList.add('hidden');
 }
 
 // Utilitários
